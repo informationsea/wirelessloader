@@ -50,8 +50,8 @@ extern volatile char usart_received;
 #endif
 
 /**
- * @brief Initialize USART with baudrate 9606
- * @note If you want to use not standard baudrate, you have to edit usart.h
+ * @brief Initialize USART
+ * @warning Don't call this function directly.
  */
 static inline void usart_init_common(void)
 {
