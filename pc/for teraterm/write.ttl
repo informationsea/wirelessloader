@@ -1,0 +1,5 @@
+disconnect
+getdir macrodir
+makepath avrwrite macrodir '.\write.bat' ;; edit write.bat to change a program to write
+exec avrwrite 'show' 1
+connect '/C=3 /BAUD=38400' ;; set COM port and baudrate
