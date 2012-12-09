@@ -22,6 +22,7 @@ void erase_program(void);
 void write_program(void);
 void read_program(void);
 void crc32_program(void);
+void exit(void);
 
 #define LENGTH(x) (sizeof(x)/sizeof(x[0]))
 
@@ -33,11 +34,14 @@ void crc32_program(void);
 #define ONCE_PAGENUM 4
 #endif
 
+#define TIMEOUT 10 // (seconds)
+
 LOCKBITS = BLB1_MODE_2;
 
 int main(void)
 {
     //boot_spm_interrupt_enable();
+    uint32_t timeout_count = 0;
     volatile char reset = MCUSR;
     (void)reset;
 
@@ -51,6 +55,17 @@ int main(void)
     usart_init(BAUDRATE);
 
     boot_lock_bits_set_safe(_BV(BLB11));
+
+    for (timeout_count = 0; timeout_count < TIMEOUT*1000; timeout_count++) {
+        if (UCSR0A & _BV(RXC0)) {
+            goto next;
+        }
+        _delay_ms(1);
+    }
+    
+    exit();
+
+  next:
 
     while(1) {
         usart_putc(CODE_READY);
@@ -69,12 +84,7 @@ int main(void)
             crc32_program();
             break;
         case CODE_EXIT:
-            usart_putc(CODE_EXIT);
-            _delay_ms(10);
-            boot_rww_enable_safe();
-            _delay_ms(10);
-            // jump to reset vector
-            asm volatile ("jmp 0\n");
+            exit();
             break;
         case CODE_READ_VERSION:
             show_version();
@@ -94,6 +104,15 @@ int main(void)
     while(1);
 }
 
+void exit(void)
+{
+    usart_putc(CODE_EXIT);
+    _delay_ms(10);
+    boot_rww_enable_safe();
+    _delay_ms(10);
+    // jump to reset vector
+    asm volatile ("jmp 0\n");
+}
 
 uint8_t hex_to_byte(uint8_t first, uint8_t second)
 {
@@ -168,9 +187,6 @@ void write_program(void)
         address[i] = 0;
     for (i = 0; i < LENGTH(buffer); i++)
         memset(buffer[i], 0xff, LENGTH(buffer[0]));
-
-    //usart_putc(CODE_WRITE_PROGRAM);
-    DDRA = 0x0f;
 
     while (1) {
         uint8_t will_write_pagenum = 0;
